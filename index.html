@@ -103,21 +103,42 @@
     font-size:13.5px;
     color: var(--text-dim);
     cursor:pointer;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
     display:flex;
     justify-content:space-between;
     align-items:center;
     gap:6px;
+    position:relative;
   }
   .history-item:hover{ background: var(--bg-elev); color:var(--text); }
   .history-item.active{ background: var(--bg-elev); color:var(--text); }
-  .history-item .del{
-    opacity:0; font-size:12px; color:var(--text-faint);
+  .history-item .title-span{
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;
   }
-  .history-item:hover .del{ opacity:1; }
-  .history-item .del:hover{ color:var(--danger); }
+  .history-item.pinned .title-span::before{ content:"📌 "; }
+  .history-item .rename-input{
+    flex:1; background:var(--bg); border:1px solid var(--accent); color:var(--text);
+    border-radius:6px; padding:3px 6px; font-size:13px; font-family:inherit; outline:none;
+  }
+  .history-item .menu-btn{
+    opacity:0; background:none; border:none; color:var(--text-faint);
+    padding:2px 5px; border-radius:5px; cursor:pointer; font-size:13px; flex-shrink:0;
+  }
+  .history-item:hover .menu-btn, .history-item .menu-btn.open{ opacity:1; }
+  .history-item .menu-btn:hover{ background:var(--bg); color:var(--text); }
+  .item-menu{
+    position:absolute; right:6px; top:34px; z-index:30;
+    background: var(--bg-elev); border:1px solid var(--border); border-radius:10px;
+    padding:5px; display:none; flex-direction:column; min-width:150px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+  .item-menu.show{ display:flex; }
+  .item-menu button{
+    background:none; border:none; color:var(--text-dim); text-align:left;
+    padding:8px 10px; border-radius:7px; cursor:pointer; font-size:13px; font-family:inherit;
+    display:flex; align-items:center; gap:8px;
+  }
+  .item-menu button:hover{ background:var(--bg); color:var(--text); }
+  .item-menu button.danger:hover{ color: var(--danger); }
 
   .sidebar-foot{
     border-top:1px solid var(--border);
@@ -469,6 +490,83 @@
   }
   .attach-btn:hover{ background: var(--bg); color: var(--text); }
 
+  .genmode-btn{
+    width:34px; height:34px;
+    border-radius:10px;
+    border:none;
+    background: transparent;
+    color: var(--text-dim);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    margin-bottom:1px;
+  }
+  .genmode-btn:hover{ background: var(--bg); color: var(--text); }
+  .genmode-btn.active{ background: var(--accent-dim); color: var(--accent); }
+
+  .mic-btn{
+    width:34px; height:34px;
+    border-radius:10px;
+    border:none;
+    background: transparent;
+    color: var(--text-dim);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    margin-bottom:1px;
+  }
+  .mic-btn:hover{ background: var(--bg); color: var(--text); }
+  .mic-btn.recording{ background: var(--danger); color:#fff; animation: pulseMic 1.1s infinite; }
+  @keyframes pulseMic{
+    0%,100%{ box-shadow: 0 0 0 0 rgba(226,114,91,0.5); }
+    50%{ box-shadow: 0 0 0 6px rgba(226,114,91,0); }
+  }
+
+  .model-bar{
+    max-width:720px;
+    margin: 8px auto 0 auto;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .model-bar label{
+    font-size:12px; color:var(--text-faint); flex-shrink:0;
+  }
+  .model-bar select{
+    flex:1;
+    background: var(--bg-elev);
+    border:1px solid var(--border);
+    color: var(--text);
+    font-family:inherit;
+    font-size:12.5px;
+    padding:6px 10px;
+    border-radius:8px;
+    outline:none;
+    cursor:pointer;
+  }
+  .model-bar select:focus{ border-color: var(--accent); }
+  .model-bar .model-hint{
+    font-size:11px; color:var(--text-faint); flex-shrink:0;
+  }
+
+  .genmode-banner{
+    max-width:720px;
+    margin: 0 auto 8px auto;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12.5px;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border:1px solid var(--accent);
+    border-radius:10px;
+    padding:7px 12px;
+  }
+  .genmode-banner button{
+    margin-left:auto;
+    background:none; border:none; color:var(--accent); cursor:pointer; font-size:12px; text-decoration:underline;
+  }
+
   .attach-preview{
     max-width: 720px;
     margin: 0 auto 8px auto;
@@ -612,15 +710,30 @@
 
     <div class="composer-wrap">
       <div id="attachPreview" class="attach-preview"></div>
+      <div id="genModeBanner" class="genmode-banner" style="display:none;">
+        <span>✨ Chế độ tạo ảnh đang bật — tin nhắn tiếp theo sẽ được dùng để vẽ ảnh</span>
+        <button id="exitGenMode" type="button">Tắt</button>
+      </div>
       <div class="composer">
         <button class="attach-btn" id="attachBtn" type="button" title="Đính kèm ảnh/file">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a5 5 0 01-7.07-7.07l9.19-9.19a3.5 3.5 0 014.95 4.95l-9.2 9.19a1.5 1.5 0 01-2.12-2.12l8.49-8.48"/></svg>
         </button>
+        <button class="genmode-btn" id="genModeBtn" type="button" title="Chế độ tạo ảnh">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg>
+        </button>
         <input type="file" id="fileInput" accept="image/*,.txt,.md,.csv,.json" multiple hidden>
+        <button class="mic-btn" id="micBtn" type="button" title="Nói để nhập văn bản">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
+        </button>
         <textarea id="input" rows="1" placeholder="Nhắn gì đó..."></textarea>
         <button class="send-btn" id="sendBtn" disabled>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
         </button>
+      </div>
+      <div class="model-bar">
+        <label>Model:</label>
+        <select id="modelSelect"></select>
+        <span class="model-hint">cần API key đã cấu hình</span>
       </div>
       <div class="hint">AI có thể trả lời sai. Kiểm tra lại thông tin quan trọng. Ảnh chỉ được đọc nếu model hỗ trợ vision.</div>
     </div>
@@ -642,6 +755,18 @@
     <div class="field">
       <label>Tên model</label>
       <input id="modelInput" type="text" placeholder="deepseek-v4-flash">
+    </div>
+    <div class="field" style="border-top:1px solid var(--border); padding-top:14px;">
+      <label>Endpoint tạo ảnh (tùy chọn)</label>
+      <input id="imageEndpointInput" type="text" placeholder="https://.../v1/images/generations">
+    </div>
+    <div class="field">
+      <label>Endpoint chỉnh sửa ảnh (tùy chọn)</label>
+      <input id="imageEditEndpointInput" type="text" placeholder="https://.../v1/images/edits">
+    </div>
+    <div class="field">
+      <label>Tên model tạo ảnh</label>
+      <input id="imageModelInput" type="text" placeholder="vd: image-flash">
     </div>
     <div class="modal-actions">
       <button class="btn" id="closeModal">Đóng</button>
@@ -665,16 +790,51 @@
   const attachBtn = $('attachBtn');
   const fileInput = $('fileInput');
   const attachPreview = $('attachPreview');
+  const micBtn = $('micBtn');
+  const modelSelect = $('modelSelect');
 
   const STORAGE_CFG = 'chatui_cfg';
   const STORAGE_CHATS = 'chatui_chats';
+
+  const MODEL_LIST = [
+    { label: 'GPT-5.6-Luna', value: 'gpt-5.6-luna' },
+    { label: 'GPT-5.6-Terra', value: 'gpt-5.6-terra' },
+    { label: 'GPT-5.4-Nano', value: 'gpt-5.4-nano' },
+    { label: 'GPT-5.4-Mini', value: 'gpt-5.4-mini' },
+    { label: 'GPT-5.4-Pro', value: 'gpt-5.4-pro' },
+    { label: 'GPT-5.4', value: 'gpt-5.4' },
+    { label: 'GPT-5.3-Codex', value: 'gpt-5.3-codex' },
+    { label: 'GPT-5.3-Chat', value: 'gpt-5.3-chat' },
+    { label: 'GPT-5.2-Codex', value: 'gpt-5.2-codex' },
+    { label: 'GPT-5.2', value: 'gpt-5.2' },
+    { label: 'GPT-5.1-Codex', value: 'gpt-5.1-codex' },
+    { label: 'GPT-5.1-Codex-Max', value: 'gpt-5.1-codex-max' },
+    { label: 'GPT-5.1-Codex-Mini', value: 'gpt-5.1-codex-mini' },
+    { label: 'GPT-5.1-Chat', value: 'gpt-5.1-chat' },
+    { label: 'GPT-5-Codex', value: 'gpt-5-codex' },
+    { label: 'GPT-5-Chat', value: 'gpt-5-chat' },
+    { label: 'GPT-5-Mini', value: 'gpt-5-mini' },
+    { label: 'GPT-5', value: 'gpt-5' },
+    { label: 'GPT-4.1', value: 'gpt-4.1' },
+    { label: 'GPT-4.1-Mini', value: 'gpt-4.1-mini' },
+    { label: 'GPT-4o', value: 'gpt-4o' },
+    { label: 'o4-mini', value: 'o4-mini' },
+    { label: 'Codex-Mini', value: 'codex-mini' },
+    { label: 'GPT-Chat-Latest', value: 'gpt-chat-latest' }
+  ];
 
   let cfg = JSON.parse(localStorage.getItem(STORAGE_CFG) || '{}');
   cfg.endpoint = cfg.endpoint || '';
   cfg.key = cfg.key || '';
   cfg.model = cfg.model || 'deepseek-v4-flash';
+  cfg.imageEndpoint = cfg.imageEndpoint || '';
+  cfg.imageEditEndpoint = cfg.imageEditEndpoint || '';
+  cfg.imageModel = cfg.imageModel || '';
+
+  let genMode = false;
 
   let chats = JSON.parse(localStorage.getItem(STORAGE_CHATS) || '[]');
+  chats.forEach(c => { if (c.pinned === undefined) c.pinned = false; });
   let currentChatId = null;
   let pendingAttachments = []; // { kind:'image'|'text', name, dataUrl?, content? }
 
@@ -684,14 +844,17 @@
     redo: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 10-3 6.7"/><path d="M21 4v6h-6"/></svg>',
     like: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 011.92 2.56l-2.33 8A2 2 0 0117.5 22H4a2 2 0 01-2-2v-8a2 2 0 012-2h2.76a2 2 0 001.79-1.11L12 2a2.76 2.76 0 013 2.76c0 .3-.03.7-.03 1.12Z"/></svg>',
     dislike: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 01-1.92-2.56l2.33-8A2 2 0 016.5 2H20a2 2 0 012 2v8a2 2 0 01-2 2h-2.76a2 2 0 00-1.79 1.11L12 22a2.76 2.76 0 01-3-2.76c0-.3.03-.7.03-1.12Z"/></svg>',
-    check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>'
+    check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>',
+    pin: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z"/></svg>',
+    rename: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>',
+    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>'
   };
 
   function saveChats(){ localStorage.setItem(STORAGE_CHATS, JSON.stringify(chats)); }
   function saveCfg(){ localStorage.setItem(STORAGE_CFG, JSON.stringify(cfg)); }
 
   function newChat(){
-    const chat = { id: Date.now().toString(), title: 'Cuộc trò chuyện mới', messages: [] };
+    const chat = { id: Date.now().toString(), title: 'Cuộc trò chuyện mới', messages: [], pinned: false };
     chats.unshift(chat);
     currentChatId = chat.id;
     saveChats();
@@ -709,20 +872,84 @@
     return { role: m.role, text: (typeof m.content === 'string' ? m.content : ''), images: [], attachmentNames: [] };
   }
 
+  function closeAllItemMenus(){
+    document.querySelectorAll('.item-menu.show').forEach(m => m.classList.remove('show'));
+    document.querySelectorAll('.menu-btn.open').forEach(b => b.classList.remove('open'));
+  }
+
+  function startRenameChat(chatObj, titleSpan){
+    const inp = document.createElement('input');
+    inp.className = 'rename-input';
+    inp.value = chatObj.title;
+    titleSpan.replaceWith(inp);
+    inp.focus();
+    inp.select();
+    const commit = () => {
+      const v = inp.value.trim();
+      if (v) chatObj.title = v;
+      saveChats();
+      renderHistory();
+    };
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter'){ e.preventDefault(); commit(); }
+      if (e.key === 'Escape'){ renderHistory(); }
+    });
+    inp.addEventListener('blur', commit);
+  }
+
   function renderHistory(){
     historyList.innerHTML = '';
-    chats.forEach(c => {
+    const sorted = [...chats].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+    sorted.forEach(c => {
       const item = document.createElement('div');
-      item.className = 'history-item' + (c.id === currentChatId ? ' active' : '');
-      item.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.title)}</span><span class="del" data-id="${c.id}">✕</span>`;
+      item.className = 'history-item' + (c.id === currentChatId ? ' active' : '') + (c.pinned ? ' pinned' : '');
+
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'title-span';
+      titleSpan.textContent = c.title;
+
+      const menuBtn = document.createElement('button');
+      menuBtn.className = 'menu-btn';
+      menuBtn.innerHTML = '⋯';
+
+      const menu = document.createElement('div');
+      menu.className = 'item-menu';
+      menu.innerHTML = `
+        <button class="m-pin">${ICONS.pin} ${c.pinned ? 'Bỏ ghim' : 'Ghim'}</button>
+        <button class="m-rename">${ICONS.rename} Đổi tên</button>
+        <button class="m-delete danger">${ICONS.trash} Xóa</button>`;
+
+      item.appendChild(titleSpan);
+      item.appendChild(menuBtn);
+      item.appendChild(menu);
+
       item.addEventListener('click', (e) => {
-        if (e.target.classList.contains('del')) return;
+        if (e.target === menuBtn || menuBtn.contains(e.target) || menu.contains(e.target)) return;
         currentChatId = c.id;
         renderHistory();
         renderThread();
         closeSidebarMobile();
       });
-      item.querySelector('.del').addEventListener('click', (e) => {
+
+      menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const willOpen = !menu.classList.contains('show');
+        closeAllItemMenus();
+        if (willOpen){ menu.classList.add('show'); menuBtn.classList.add('open'); }
+      });
+
+      menu.querySelector('.m-pin').addEventListener('click', (e) => {
+        e.stopPropagation();
+        c.pinned = !c.pinned;
+        saveChats();
+        renderHistory();
+      });
+      menu.querySelector('.m-rename').addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeAllItemMenus();
+        startRenameChat(c, titleSpan);
+      });
+      menu.querySelector('.m-delete').addEventListener('click', (e) => {
         e.stopPropagation();
         chats = chats.filter(x => x.id !== c.id);
         if (currentChatId === c.id) currentChatId = chats.length ? chats[0].id : null;
@@ -730,9 +957,11 @@
         renderHistory();
         renderThread();
       });
+
       historyList.appendChild(item);
     });
   }
+  document.addEventListener('click', closeAllItemMenus);
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -1004,7 +1233,98 @@
     }
   }
 
+  function dataUrlToBlob(dataUrl){
+    return fetch(dataUrl).then(r => r.blob());
+  }
+
+  function extractResultImages(data){
+    if (!data || !Array.isArray(data.data)) return [];
+    return data.data.map((item, i) => {
+      const url = item.url ? item.url : (item.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+      return url ? { name: `Ảnh ${i + 1}`, dataUrl: url } : null;
+    }).filter(Boolean);
+  }
+
+  async function sendImageGeneration(){
+    const prompt = input.value.trim();
+    if (!prompt){ return; }
+    if (!cfg.key || (!cfg.imageEndpoint && !cfg.imageEditEndpoint)){
+      openSettings();
+      return;
+    }
+    if (!currentChatId) newChat();
+    const chat = getCurrentChat();
+    welcome.style.display = 'none';
+
+    const editImages = pendingAttachments.filter(a => a.kind === 'image');
+    const userMsg = { role: 'user', text: prompt, images: editImages.map(a => ({ name: a.name, dataUrl: a.dataUrl })), attachmentNames: pendingAttachments.map(a => a.name), fileContext: '' };
+    chat.messages.push(userMsg);
+    if (chat.title === 'Cuộc trò chuyện mới') chat.title = ('🎨 ' + prompt).slice(0, 40);
+    appendBubble(chat.messages.length - 1, true);
+    saveChats();
+    renderHistory();
+
+    input.value = '';
+    pendingAttachments = [];
+    renderAttachPreview();
+    autoResize();
+    sendBtn.disabled = true;
+    appendTyping();
+
+    try {
+      let res;
+      if (editImages.length > 0){
+        if (!cfg.imageEditEndpoint){ throw new Error('Chưa cấu hình endpoint chỉnh sửa ảnh trong Cài đặt.'); }
+        const form = new FormData();
+        const blob = await dataUrlToBlob(editImages[0].dataUrl);
+        form.append('image', blob, editImages[0].name || 'image.png');
+        form.append('prompt', prompt);
+        if (cfg.imageModel) form.append('model', cfg.imageModel);
+        form.append('n', '1');
+        res = await fetch(cfg.imageEditEndpoint, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${cfg.key}` },
+          body: form
+        });
+      } else {
+        if (!cfg.imageEndpoint){ throw new Error('Chưa cấu hình endpoint tạo ảnh trong Cài đặt.'); }
+        res = await fetch(cfg.imageEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.key}` },
+          body: JSON.stringify({ model: cfg.imageModel || undefined, prompt, n: 1, size: '1024x1024' })
+        });
+      }
+
+      const data = await res.json();
+      removeTyping();
+
+      if (!res.ok){
+        const errMsg = (data && data.error && data.error.message) ? data.error.message : `Lỗi HTTP ${res.status}`;
+        chat.messages.push({ role: 'assistant', text: 'Không tạo được ảnh: ' + errMsg, images: [], attachmentNames: [] });
+        saveChats();
+        renderThread();
+        return;
+      }
+
+      const images = extractResultImages(data);
+      chat.messages.push({ role: 'assistant', text: images.length ? '' : 'Không nhận được ảnh trả về.', images, attachmentNames: [] });
+      saveChats();
+      renderThread();
+    } catch (err){
+      removeTyping();
+      chat.messages.push({ role: 'assistant', text: 'Lỗi: ' + err.message, images: [], attachmentNames: [] });
+      saveChats();
+      renderThread();
+    } finally {
+      sendBtn.disabled = input.value.trim().length === 0 && pendingAttachments.length === 0;
+    }
+  }
+
   async function sendMessage(){
+    if (genMode){
+      await sendImageGeneration();
+      return;
+    }
     const text = input.value.trim();
     if (!text && pendingAttachments.length === 0) return;
     if (!cfg.endpoint || !cfg.key){
@@ -1091,10 +1411,87 @@
     });
   }
 
+  function populateModelSelect(){
+    modelSelect.innerHTML = '';
+    const known = MODEL_LIST.some(m => m.value === cfg.model);
+    if (!known){
+      const opt = document.createElement('option');
+      opt.value = cfg.model;
+      opt.textContent = cfg.model + ' (tùy chỉnh)';
+      modelSelect.appendChild(opt);
+    }
+    MODEL_LIST.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.value;
+      opt.textContent = m.label;
+      modelSelect.appendChild(opt);
+    });
+    modelSelect.value = cfg.model;
+  }
+  modelSelect.addEventListener('change', () => {
+    cfg.model = modelSelect.value;
+    saveCfg();
+    modelLabel.textContent = cfg.model;
+  });
+
+  // ---- Mic: speech-to-text bằng Web Speech API của trình duyệt ----
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognizer = null;
+  let isRecording = false;
+
+  if (SpeechRecognitionCtor){
+    recognizer = new SpeechRecognitionCtor();
+    recognizer.lang = 'vi-VN';
+    recognizer.continuous = true;
+    recognizer.interimResults = true;
+
+    let baseText = '';
+
+    recognizer.onstart = () => {
+      isRecording = true;
+      baseText = input.value ? (input.value.trim() + ' ') : '';
+      micBtn.classList.add('recording');
+    };
+    recognizer.onresult = (e) => {
+      let finalText = '';
+      let interimText = '';
+      for (let i = 0; i < e.results.length; i++){
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += t + ' ';
+        else interimText += t;
+      }
+      input.value = (baseText + finalText + interimText).trim();
+      autoResize();
+    };
+    recognizer.onerror = () => {
+      isRecording = false;
+      micBtn.classList.remove('recording');
+    };
+    recognizer.onend = () => {
+      isRecording = false;
+      micBtn.classList.remove('recording');
+    };
+
+    micBtn.addEventListener('click', () => {
+      if (isRecording){
+        recognizer.stop();
+      } else {
+        try { recognizer.start(); } catch (e) { /* already started */ }
+      }
+    });
+  } else {
+    micBtn.addEventListener('click', () => {
+      alert('Trình duyệt này không hỗ trợ nhận diện giọng nói (Web Speech API). Hãy thử trên Chrome hoặc Edge.');
+    });
+  }
+
   function openSettings(){
     $('endpointInput').value = cfg.endpoint;
     $('keyInput').value = cfg.key;
     $('modelInput').value = cfg.model;
+    $('imageEndpointInput').value = cfg.imageEndpoint;
+    $('imageEditEndpointInput').value = cfg.imageEditEndpoint;
+    $('imageModelInput').value = cfg.imageModel;
     overlay.classList.add('show');
   }
   function closeSettings(){ overlay.classList.remove('show'); }
@@ -1127,10 +1524,22 @@
     cfg.endpoint = $('endpointInput').value.trim();
     cfg.key = $('keyInput').value.trim();
     cfg.model = $('modelInput').value.trim() || 'deepseek-v4-flash';
+    cfg.imageEndpoint = $('imageEndpointInput').value.trim();
+    cfg.imageEditEndpoint = $('imageEditEndpointInput').value.trim();
+    cfg.imageModel = $('imageModelInput').value.trim();
     saveCfg();
     modelLabel.textContent = cfg.model;
+    populateModelSelect();
     closeSettings();
   });
+  function setGenMode(on){
+    genMode = on;
+    $('genModeBtn').classList.toggle('active', on);
+    $('genModeBanner').style.display = on ? 'flex' : 'none';
+    input.placeholder = on ? 'Mô tả ảnh bạn muốn tạo hoặc chỉnh sửa...' : 'Nhắn gì đó...';
+  }
+  $('genModeBtn').addEventListener('click', () => setGenMode(!genMode));
+  $('exitGenMode').addEventListener('click', () => setGenMode(false));
   $('menuToggle').addEventListener('click', () => {
     $('sidebar').classList.toggle('open');
     $('sidebarBackdrop').classList.toggle('show');
@@ -1146,6 +1555,7 @@
 
   // init
   modelLabel.textContent = cfg.model;
+  populateModelSelect();
   if (chats.length) currentChatId = chats[0].id;
   renderHistory();
   renderThread();

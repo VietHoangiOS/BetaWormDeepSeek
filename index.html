@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đàm — trợ lý AI</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #0E1013;
+    --bg-side: #14171B;
+    --bg-elev: #1B1F25;
+    --border: #262B33;
+    --text: #E7E6E2;
+    --text-dim: #9198A3;
+    --text-faint: #5B6270;
+    --accent: #4FD1AE;
+    --accent-dim: #33473F;
+    --user-bubble: #232833;
+    --danger: #E2725B;
+    --radius: 14px;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    overflow:hidden;
+  }
+
+  .app{
+    display:flex;
+    height:100vh;
+    width:100vw;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width: 260px;
+    min-width: 260px;
+    background: var(--bg-side);
+    border-right: 1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    padding: 16px 12px;
+    transition: margin-left .25s ease;
+  }
+  .brand{
+    font-family:'Sora', sans-serif;
+    font-weight:600;
+    font-size: 18px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding: 6px 8px 18px 8px;
+    color: var(--text);
+  }
+  .brand .dot{
+    width:9px; height:9px; border-radius:50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px 2px var(--accent-dim);
+  }
+  .new-chat{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background: var(--bg-elev);
+    border:1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor:pointer;
+    font-size:14px;
+    font-family:inherit;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .new-chat:hover{ border-color: var(--accent); background:#1E232B; }
+
+  .history{
+    margin-top: 16px;
+    flex:1;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .history::-webkit-scrollbar{ width:6px; }
+  .history::-webkit-scrollbar-thumb{ background:var(--border); border-radius:3px; }
+
+  .history-item{
+    padding:9px 10px;
+    border-radius:8px;
+    font-size:13.5px;
+    color: var(--text-dim);
+    cursor:pointer;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:6px;
+  }
+  .history-item:hover{ background: var(--bg-elev); color:var(--text); }
+  .history-item.active{ background: var(--bg-elev); color:var(--text); }
+  .history-item .del{
+    opacity:0; font-size:12px; color:var(--text-faint);
+  }
+  .history-item:hover .del{ opacity:1; }
+  .history-item .del:hover{ color:var(--danger); }
+
+  .sidebar-foot{
+    border-top:1px solid var(--border);
+    padding-top: 10px;
+    margin-top: 8px;
+  }
+  .settings-btn{
+    width:100%;
+    display:flex; align-items:center; gap:8px;
+    background:transparent; border:none; color:var(--text-dim);
+    padding:9px 8px; border-radius:8px; cursor:pointer; font-size:13.5px; font-family:inherit;
+  }
+  .settings-btn:hover{ background: var(--bg-elev); color:var(--text); }
+
+  /* ---------- Main ---------- */
+  .main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+    position:relative;
+  }
+  .topbar{
+    height:52px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink:0;
+  }
+  .topbar .model-tag{
+    font-size:12.5px;
+    color: var(--text-dim);
+    background: var(--bg-elev);
+    border:1px solid var(--border);
+    padding:5px 10px;
+    border-radius: 20px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .model-tag .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); }
+  .icon-btn{
+    background:none; border:none; color:var(--text-dim); cursor:pointer; padding:6px;
+    border-radius:8px; display:flex; align-items:center; justify-content:center;
+  }
+  .icon-btn:hover{ background:var(--bg-elev); color:var(--text); }
+
+  .thread{
+    flex:1;
+    overflow-y:auto;
+    padding: 28px 0 8px 0;
+  }
+  .thread::-webkit-scrollbar{ width:8px; }
+  .thread::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
+
+  .thread-inner{
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display:flex;
+    flex-direction:column;
+    gap: 22px;
+  }
+
+  .welcome{
+    height: calc(100vh - 200px);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    gap:14px;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .welcome h1{
+    font-family:'Sora', sans-serif;
+    font-weight:600;
+    font-size: 26px;
+    margin:0;
+    color: var(--text);
+  }
+  .welcome p{
+    color: var(--text-dim);
+    margin:0;
+    font-size:14.5px;
+  }
+  .suggestions{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:10px;
+    margin-top: 18px;
+    width:100%;
+  }
+  .suggestion{
+    text-align:left;
+    background: var(--bg-elev);
+    border:1px solid var(--border);
+    color: var(--text-dim);
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size:13px;
+    cursor:pointer;
+    font-family:inherit;
+    transition: border-color .15s ease;
+  }
+  .suggestion:hover{ border-color: var(--accent); color:var(--text); }
+
+  .msg-row{ display:flex; gap:12px; align-items:flex-start; }
+  .msg-row.user{ flex-direction:row-reverse; }
+  .avatar{
+    width:28px; height:28px; border-radius:8px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:600; font-family:'Sora',sans-serif;
+    margin-top:2px;
+  }
+  .avatar.ai{ background: var(--accent-dim); color: var(--accent); }
+  .avatar.user{ background: #2E3542; color: var(--text-dim); }
+
+  .bubble{
+    max-width: 78%;
+    padding: 11px 15px;
+    border-radius: var(--radius);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size:14.5px;
+  }
+  .msg-row.user .bubble{
+    background: var(--user-bubble);
+    border-top-right-radius:4px;
+    color: var(--text);
+  }
+  .msg-row.ai .bubble{
+    background: transparent;
+    padding: 11px 0;
+    border-top-left-radius:4px;
+    color: var(--text);
+  }
+  .bubble.error{ color: var(--danger); }
+  .bubble p{ margin: 0 0 10px 0; }
+  .bubble p:last-child{ margin-bottom:0; }
+  .bubble code{
+    background: var(--bg-elev);
+    padding: 2px 5px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+  }
+  .bubble pre{
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+    border-radius: 10px;
+    overflow-x:auto;
+    margin: 8px 0;
+  }
+  .bubble pre code{ background:none; padding:0; }
+
+  .typing{
+    display:flex; gap:4px; padding: 14px 0;
+  }
+  .typing span{
+    width:6px; height:6px; border-radius:50%;
+    background: var(--text-faint);
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+  .typing span:nth-child(2){ animation-delay:.15s; }
+  .typing span:nth-child(3){ animation-delay:.3s; }
+  @keyframes bounce{
+    0%,60%,100%{ transform: translateY(0); opacity:.5; }
+    30%{ transform: translateY(-4px); opacity:1; }
+  }
+
+  /* ---------- Composer ---------- */
+  .composer-wrap{
+    padding: 10px 24px 20px 24px;
+  }
+  .composer{
+    max-width: 720px;
+    margin: 0 auto;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    display:flex;
+    align-items:flex-end;
+    gap: 8px;
+    padding: 8px 8px 8px 16px;
+    transition: border-color .15s ease;
+  }
+  .composer:focus-within{ border-color: var(--accent); }
+  .composer textarea{
+    flex:1;
+    background:none;
+    border:none;
+    outline:none;
+    resize:none;
+    color: var(--text);
+    font-family:inherit;
+    font-size: 14.5px;
+    line-height: 1.5;
+    max-height: 160px;
+    padding: 8px 0;
+  }
+  .composer textarea::placeholder{ color: var(--text-faint); }
+  .send-btn{
+    width:34px; height:34px;
+    border-radius:10px;
+    border:none;
+    background: var(--accent);
+    color: #0E1013;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    transition: opacity .15s ease, transform .1s ease;
+  }
+  .send-btn:disabled{ background: var(--border); color: var(--text-faint); cursor:not-allowed; }
+  .send-btn:active:not(:disabled){ transform: scale(.92); }
+  .hint{
+    text-align:center;
+    font-size: 11.5px;
+    color: var(--text-faint);
+    margin-top: 10px;
+    max-width:720px;
+    margin-left:auto; margin-right:auto;
+  }
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed; inset:0;
+    background: rgba(6,7,9,0.6);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index: 50;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 420px;
+    max-width: 90vw;
+    padding: 22px;
+  }
+  .modal h2{
+    font-family:'Sora',sans-serif;
+    font-size:17px;
+    margin: 0 0 4px 0;
+  }
+  .modal .sub{ color:var(--text-dim); font-size:13px; margin:0 0 18px 0; }
+  .field{ margin-bottom: 14px; }
+  .field label{
+    display:block;
+    font-size:12.5px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .field input{
+    width:100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 9px;
+    font-size:13.5px;
+    font-family:inherit;
+    outline:none;
+  }
+  .field input:focus{ border-color: var(--accent); }
+  .modal-actions{
+    display:flex; justify-content:flex-end; gap:8px; margin-top:18px;
+  }
+  .btn{
+    padding: 9px 16px;
+    border-radius: 10px;
+    border:1px solid var(--border);
+    background:transparent;
+    color: var(--text-dim);
+    cursor:pointer;
+    font-size:13.5px;
+    font-family:inherit;
+  }
+  .btn.primary{
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0E1013;
+    font-weight:600;
+  }
+  .btn:hover{ filter:brightness(1.1); }
+
+  /* mobile */
+  .menu-toggle{ display:none; }
+  @media (max-width: 760px){
+    .sidebar{ position:fixed; left:0; top:0; bottom:0; z-index:40; margin-left:-260px; box-shadow: 20px 0 40px rgba(0,0,0,.3); }
+    .sidebar.open{ margin-left:0; }
+    .menu-toggle{ display:flex; }
+    .suggestions{ grid-template-columns: 1fr; }
+    .bubble{ max-width:88%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="dot"></span>Đàm</div>
+    <button class="new-chat" id="newChatBtn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      Cuộc trò chuyện mới
+    </button>
+    <div class="history" id="historyList"></div>
+    <div class="sidebar-foot">
+      <button class="settings-btn" id="settingsBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 0 1-4 0v-.09A1.7 1.7 0 0 0 8.96 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.96a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 0 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 0 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1.04z"/></svg>
+        Cài đặt kết nối
+      </button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <button class="icon-btn menu-toggle" id="menuToggle">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+      <div class="model-tag"><span class="dot"></span><span id="modelLabel">deepseek-v4-flash</span></div>
+      <button class="icon-btn" id="topSettingsBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 0 1-4 0v-.09A1.7 1.7 0 0 0 8.96 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.96a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 0 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 0 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1.04z"/></svg>
+      </button>
+    </div>
+
+    <div class="thread" id="thread">
+      <div class="welcome" id="welcome">
+        <h1>Hôm nay bạn cần giúp gì?</h1>
+        <p>Trợ lý chạy bằng DeepSeek-v4-flash. Nhấn cài đặt để nhập endpoint và API key trước khi bắt đầu.</p>
+        <div class="suggestions">
+          <button class="suggestion" data-fill="Giải thích khái niệm đệ quy trong lập trình bằng ví dụ đơn giản">Giải thích đệ quy bằng ví dụ đơn giản</button>
+          <button class="suggestion" data-fill="Viết giúp mình một email xin nghỉ phép lịch sự">Viết email xin nghỉ phép</button>
+          <button class="suggestion" data-fill="Gợi ý thực đơn ăn healthy cho một tuần">Gợi ý thực đơn ăn healthy 1 tuần</button>
+          <button class="suggestion" data-fill="Tóm tắt sự khác nhau giữa React và Vue">So sánh React và Vue</button>
+        </div>
+      </div>
+      <div class="thread-inner" id="threadInner"></div>
+    </div>
+
+    <div class="composer-wrap">
+      <div class="composer">
+        <textarea id="input" rows="1" placeholder="Nhắn gì đó..."></textarea>
+        <button class="send-btn" id="sendBtn" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        </button>
+      </div>
+      <div class="hint">AI có thể trả lời sai. Kiểm tra lại thông tin quan trọng.</div>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>Cài đặt kết nối</h2>
+    <p class="sub">Thông tin được lưu trong trình duyệt của bạn (localStorage), không gửi đi đâu khác ngoài API bạn khai báo.</p>
+    <div class="field">
+      <label>Endpoint API (dạng /v1/chat/completions)</label>
+      <input id="endpointInput" type="text" placeholder="https://api.deepseek.com/v1/chat/completions">
+    </div>
+    <div class="field">
+      <label>API key</label>
+      <input id="keyInput" type="password" placeholder="sk-...">
+    </div>
+    <div class="field">
+      <label>Tên model</label>
+      <input id="modelInput" type="text" placeholder="deepseek-v4-flash">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="closeModal">Đóng</button>
+      <button class="btn primary" id="saveSettings">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+
+  const thread = $('thread');
+  const threadInner = $('threadInner');
+  const welcome = $('welcome');
+  const input = $('input');
+  const sendBtn = $('sendBtn');
+  const overlay = $('overlay');
+  const historyList = $('historyList');
+  const modelLabel = $('modelLabel');
+
+  const STORAGE_CFG = 'chatui_cfg';
+  const STORAGE_CHATS = 'chatui_chats';
+
+  let cfg = JSON.parse(localStorage.getItem(STORAGE_CFG) || '{}');
+  cfg.endpoint = cfg.endpoint || '';
+  cfg.key = cfg.key || '';
+  cfg.model = cfg.model || 'deepseek-v4-flash';
+
+  let chats = JSON.parse(localStorage.getItem(STORAGE_CHATS) || '[]');
+  let currentChatId = null;
+
+  function saveChats(){ localStorage.setItem(STORAGE_CHATS, JSON.stringify(chats)); }
+  function saveCfg(){ localStorage.setItem(STORAGE_CFG, JSON.stringify(cfg)); }
+
+  function newChat(){
+    const chat = { id: Date.now().toString(), title: 'Cuộc trò chuyện mới', messages: [] };
+    chats.unshift(chat);
+    currentChatId = chat.id;
+    saveChats();
+    renderHistory();
+    renderThread();
+  }
+
+  function getCurrentChat(){
+    return chats.find(c => c.id === currentChatId);
+  }
+
+  function renderHistory(){
+    historyList.innerHTML = '';
+    chats.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'history-item' + (c.id === currentChatId ? ' active' : '');
+      item.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.title)}</span><span class="del" data-id="${c.id}">✕</span>`;
+      item.addEventListener('click', (e) => {
+        if (e.target.classList.contains('del')) return;
+        currentChatId = c.id;
+        renderHistory();
+        renderThread();
+        closeSidebarMobile();
+      });
+      item.querySelector('.del').addEventListener('click', (e) => {
+        e.stopPropagation();
+        chats = chats.filter(x => x.id !== c.id);
+        if (currentChatId === c.id) currentChatId = chats.length ? chats[0].id : null;
+        saveChats();
+        renderHistory();
+        renderThread();
+      });
+      historyList.appendChild(item);
+    });
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  // Very small markdown-ish formatting: code blocks, inline code, paragraphs
+  function formatContent(text){
+    let escaped = escapeHtml(text);
+    escaped = escaped.replace(/```([\s\S]*?)```/g, (m, code) => `<pre><code>${code.trim()}</code></pre>`);
+    escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+    const paragraphs = escaped.split(/\n\n+/).map(p => {
+      if (p.startsWith('<pre>')) return p;
+      return `<p>${p.replace(/\n/g,'<br>')}</p>`;
+    });
+    return paragraphs.join('');
+  }
+
+  function renderThread(){
+    const chat = getCurrentChat();
+    threadInner.innerHTML = '';
+    if (!chat || chat.messages.length === 0){
+      welcome.style.display = 'flex';
+      return;
+    }
+    welcome.style.display = 'none';
+    chat.messages.forEach(m => appendBubble(m.role, m.content, false));
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  function appendBubble(role, content, animate){
+    const row = document.createElement('div');
+    row.className = 'msg-row ' + (role === 'user' ? 'user' : 'ai');
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar ' + (role === 'user' ? 'user' : 'ai');
+    avatar.textContent = role === 'user' ? 'B' : 'Đ';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = formatContent(content);
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+    threadInner.appendChild(row);
+    if (animate) thread.scrollTop = thread.scrollHeight;
+    return bubble;
+  }
+
+  function appendTyping(){
+    const row = document.createElement('div');
+    row.className = 'msg-row ai';
+    row.id = 'typingRow';
+    row.innerHTML = `<div class="avatar ai">Đ</div><div class="typing"><span></span><span></span><span></span></div>`;
+    threadInner.appendChild(row);
+    thread.scrollTop = thread.scrollHeight;
+  }
+  function removeTyping(){
+    const el = document.getElementById('typingRow');
+    if (el) el.remove();
+  }
+
+  async function sendMessage(){
+    const text = input.value.trim();
+    if (!text) return;
+    if (!cfg.endpoint || !cfg.key){
+      openSettings();
+      return;
+    }
+    if (!currentChatId) newChat();
+    const chat = getCurrentChat();
+
+    welcome.style.display = 'none';
+    chat.messages.push({ role: 'user', content: text });
+    if (chat.title === 'Cuộc trò chuyện mới') {
+      chat.title = text.slice(0, 40);
+    }
+    appendBubble('user', text, true);
+    saveChats();
+    renderHistory();
+
+    input.value = '';
+    autoResize();
+    sendBtn.disabled = true;
+
+    appendTyping();
+
+    try {
+      const res = await fetch(cfg.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${cfg.key}`
+        },
+        body: JSON.stringify({
+          model: cfg.model || 'deepseek-v4-flash',
+          messages: chat.messages.map(m => ({ role: m.role, content: m.content }))
+        })
+      });
+
+      const data = await res.json();
+      removeTyping();
+
+      if (!res.ok) {
+        const errMsg = (data && data.error && data.error.message) ? data.error.message : `Lỗi HTTP ${res.status}`;
+        const b = appendBubble('ai', 'Không gọi được API: ' + errMsg, true);
+        b.classList.add('error');
+        return;
+      }
+
+      let reply = '';
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        reply = data.choices[0].message.content || '';
+      } else if (data.content) {
+        reply = Array.isArray(data.content) ? data.content.map(c => c.text || '').join('') : data.content;
+      } else {
+        reply = JSON.stringify(data);
+      }
+
+      chat.messages.push({ role: 'assistant', content: reply });
+      appendBubble('ai', reply, true);
+      saveChats();
+    } catch (err) {
+      removeTyping();
+      const b = appendBubble('ai', 'Lỗi kết nối: ' + err.message, true);
+      b.classList.add('error');
+    } finally {
+      sendBtn.disabled = input.value.trim().length === 0;
+    }
+  }
+
+  function autoResize(){
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+    sendBtn.disabled = input.value.trim().length === 0;
+  }
+
+  function openSettings(){
+    $('endpointInput').value = cfg.endpoint;
+    $('keyInput').value = cfg.key;
+    $('modelInput').value = cfg.model;
+    overlay.classList.add('show');
+  }
+  function closeSettings(){ overlay.classList.remove('show'); }
+
+  function closeSidebarMobile(){
+    $('sidebar').classList.remove('open');
+  }
+
+  // ---- events ----
+  input.addEventListener('input', autoResize);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+  sendBtn.addEventListener('click', sendMessage);
+  $('newChatBtn').addEventListener('click', () => { newChat(); closeSidebarMobile(); });
+  $('settingsBtn').addEventListener('click', openSettings);
+  $('topSettingsBtn').addEventListener('click', openSettings);
+  $('closeModal').addEventListener('click', closeSettings);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeSettings(); });
+  $('saveSettings').addEventListener('click', () => {
+    cfg.endpoint = $('endpointInput').value.trim();
+    cfg.key = $('keyInput').value.trim();
+    cfg.model = $('modelInput').value.trim() || 'deepseek-v4-flash';
+    saveCfg();
+    modelLabel.textContent = cfg.model;
+    closeSettings();
+  });
+  $('menuToggle').addEventListener('click', () => $('sidebar').classList.toggle('open'));
+  document.querySelectorAll('.suggestion').forEach(btn => {
+    btn.addEventListener('click', () => {
+      input.value = btn.getAttribute('data-fill');
+      autoResize();
+      input.focus();
+    });
+  });
+
+  // init
+  modelLabel.textContent = cfg.model;
+  if (chats.length) currentChatId = chats[0].id;
+  renderHistory();
+  renderThread();
+  if (!cfg.endpoint || !cfg.key) {
+    setTimeout(openSettings, 400);
+  }
+})();
+</script>
+
+</body>
+</html>
